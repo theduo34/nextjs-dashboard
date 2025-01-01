@@ -4,6 +4,30 @@ import { z } from 'zod';
 import { sql }from '@vercel/postgres'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { signIn } from '@/auth';
+import { AuthError } from 'next-auth';
+
+// ...
+
+export async function authenticate(
+  _prevState: string | undefined,
+  formData: FormData,
+) {
+  try {
+    await signIn('credentials', formData);
+
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case 'CredentialsSignin':
+          return 'Invalid credentials.';
+        default:
+          return 'Something went wrong.';
+      }
+    }
+    throw error;
+  }
+}
 
 export type State = {
   errors?: {
@@ -33,7 +57,7 @@ const CreateInvoice = FormSchema.omit({
   date: true
 })
 
-export async function createInvoice (prevState: State, formData: FormData) {
+export async function createInvoice (_prevState: State, formData: FormData) {
   const validatedFields = CreateInvoice.safeParse({
     customerId: formData.get('customerId'),
     amount: formData.get('amount'),
@@ -72,7 +96,7 @@ const UpdateInvoice = FormSchema.omit({
 
 export async function updateInvoice(
   id: string,
-  prevState: State,
+  _prevState: State,
   formData: FormData,
 ) {
   const validatedFields = UpdateInvoice.safeParse({
